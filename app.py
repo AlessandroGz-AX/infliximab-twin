@@ -8,13 +8,21 @@ PROTOTIPO DIMOSTRATIVO: non usare per decidere la terapia di pazienti reali.
 """
 
 import re
+import sys
 from datetime import date, timedelta
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-from gemello import AVVERTENZA, LIMITI
+# Quando arriva un aggiornamento del codice (per esempio su Streamlit Cloud dopo
+# una modifica su GitHub), Streamlit riesegue questo file ma può tenere in memoria
+# la versione VECCHIA dei moduli di gemello: ne nasce un "ImportError". Per
+# evitarlo li togliamo dalla memoria, così a ogni esecuzione vengono riletti dai file.
+for _modulo in [nome for nome in sys.modules if nome == "gemello" or nome.startswith("gemello.")]:
+    del sys.modules[_modulo]
+
+from gemello import AVVERTENZA, LIMITI  # noqa: E402  (dopo la pulizia qui sopra)
 from gemello import modello as m
 from gemello import simulazione as sim
 from gemello.grafici import grafico_concentrazione, grafico_confronto
