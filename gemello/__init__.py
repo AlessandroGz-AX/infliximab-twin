@@ -26,4 +26,8 @@ LIMITI = [
     "come nell'articolo, non dal momento in cui compaiono.",
     "Peso e albumina sono i valori di partenza e restano costanti per tutta "
     "la simulazione, come nell'articolo.",
+    "I livelli sotto 0,1 µg/mL (il limite di quantificazione dello studio) non "
+    "vengono usati dalla stima bayesiana, perché l'articolo non dice come li ha "
+    "trattati. Un livello non dosabile, che spesso indica una clearance alta o "
+    "la presenza di anticorpi, oggi quindi non sposta la curva.",
 ]

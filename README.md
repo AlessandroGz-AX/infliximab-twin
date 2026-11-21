@@ -15,7 +15,7 @@ Un paziente virtuale in cui si vede nel tempo la concentrazione di infliximab ne
 | 0 | Preparazione | fatto |
 | 1 | Modello dell'articolo + test 1 e 2 | fatto |
 | 2 | Simulatore a 54 settimane + test 3 | fatto |
-| 3 | Stima bayesiana + test 4 | da fare |
+| 3 | Stima bayesiana + test 4 | fatto |
 | 4 | App Streamlit | da fare |
 | 5 | Misure del paziente e schema alternativo | da fare |
 | 6 | README finale e bilancio | da fare |
@@ -27,9 +27,14 @@ Un paziente virtuale in cui si vede nel tempo la concentrazione di infliximab ne
 - Il modello viene da adulti (18-81 anni) con colite ulcerosa da moderata a grave, trattati negli studi ACT 1 e ACT 2 con 5 o 10 mg/kg: non vale automaticamente per altre malattie, per i bambini o per altri dosaggi.
 - Gli anticorpi anti-infliximab sono un sì/no valido per tutta la terapia, come nell'articolo, non dal momento in cui compaiono.
 - Peso e albumina sono i valori di partenza e restano costanti per tutta la simulazione, come nell'articolo.
+- I livelli sotto 0,1 µg/mL (il limite di quantificazione dello studio) non vengono usati dalla stima bayesiana, perché l'articolo non dice come li ha trattati. Un livello non dosabile, che spesso indica una clearance alta o la presenza di anticorpi, oggi quindi non sposta la curva.
 <!-- fine limiti -->
 
 Le discrepanze trovate dentro l'articolo e i risultati dei controlli sono in [docs/confronto_articolo.md](docs/confronto_articolo.md).
+
+## I test girano anche da soli su GitHub
+
+A ogni modifica di `main`, GitHub fa girare tutti i test. Sulla pagina del repository, accanto all'ultima modifica, compare un segno verde se è tutto a posto e una croce rossa se qualcosa non va. I dettagli sono nella scheda **Actions**, visibile anche da iPad o telefono.
 
 ## Come provarlo sul tuo computer
 
@@ -71,7 +76,13 @@ Serve Python 3.12 o più recente (provato con 3.13). Apri il Terminale nella car
    python -m gemello.validazione
    ```
 
-5. L'app arriverà al passo 4 e si aprirà con `streamlit run app.py`.
+5. Guarda quanto sbaglia la stima bayesiana su 100 pazienti virtuali (test 4):
+
+   ```bash
+   python -m gemello.verifica_stima
+   ```
+
+6. L'app arriverà al passo 4 e si aprirà con `streamlit run app.py`.
 
 ## Cosa c'è dentro
 
@@ -79,8 +90,11 @@ Serve Python 3.12 o più recente (provato con 3.13). Apri il Terminale nella car
 - `gemello/simulazione.py`: concentrazione nel tempo per uno schema di terapia, valli, periodi sotto soglia.
 - `gemello/popolazione.py`: popolazione virtuale simile a quella degli studi (serve per i controlli).
 - `gemello/validazione.py`: confronto con i valori osservati (test 3).
+- `gemello/stima.py`: stima bayesiana (massima a posteriori) dei parametri di un paziente dai suoi livelli misurati.
+- `gemello/verifica_stima.py`: simulazione e stima su 100 pazienti virtuali (test 4).
 - `gemello/confronto_articolo.py`: tabella "articolo contro modello".
 - `gemello/documentazione.py`: rigenera le tabelle dei documenti dal codice.
 - `docs/confronto_articolo.md`: discrepanze, punti non chiari e risultati dei controlli.
 - `tests/`: i test.
+- `.github/workflows/test.yml`: fa girare i test su GitHub a ogni modifica.
 - `CLAUDE.md`: obiettivo e regole del progetto, per le prossime sessioni di lavoro.

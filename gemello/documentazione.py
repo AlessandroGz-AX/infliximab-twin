@@ -1,7 +1,7 @@
 """
 Rigenera le parti automatiche della documentazione a partire dal codice:
-tabella di confronto con l'articolo, limiti del modello e risultati del
-Test 3. Così i documenti non restano indietro rispetto al codice.
+tabella di confronto con l'articolo, limiti del modello e risultati dei
+test 3 e 4. Così i documenti non restano indietro rispetto al codice.
 
 Uso, dalla cartella del progetto:
     python -m gemello.documentazione
@@ -12,6 +12,7 @@ from pathlib import Path
 from gemello import LIMITI
 from gemello.confronto_articolo import tabella_markdown
 from gemello.validazione import rapporto
+from gemello.verifica_stima import rapporto as rapporto_stima
 
 CARTELLA = Path(__file__).parent.parent
 PAGINA_CONFRONTO = CARTELLA / "docs" / "confronto_articolo.md"
@@ -35,6 +36,7 @@ def aggiorna() -> None:
     testo = _sostituisci(testo, "tabella", tabella_markdown())
     testo = _sostituisci(testo, "limiti", elenco_limiti())
     testo = _sostituisci(testo, "test 3", rapporto())
+    testo = _sostituisci(testo, "test 4", rapporto_stima())
     PAGINA_CONFRONTO.write_text(testo, encoding="utf-8")
 
     testo = README.read_text(encoding="utf-8")
