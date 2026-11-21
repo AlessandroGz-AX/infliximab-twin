@@ -1,0 +1,8 @@
+# Ambiente Python locale (si ricrea con: python3 -m venv .venv)
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Eventuali segreti di Streamlit (non servono a questo progetto)
+.streamlit/secrets.toml
