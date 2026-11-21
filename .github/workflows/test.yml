@@ -1,0 +1,22 @@
+# Fa girare tutti i test su GitHub a ogni modifica del ramo main.
+# Il risultato (segno verde o croce rossa) si vede sulla pagina del
+# repository e nella scheda "Actions", anche da iPad o telefono.
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:  # permette di rilanciarli a mano dalla scheda Actions
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m pytest
