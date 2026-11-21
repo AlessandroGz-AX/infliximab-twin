@@ -56,7 +56,6 @@ Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L,
 
 ## Domande aperte
 1. **Numeri di Adedokun 2014 da verificare** sull'articolo originale. Il sito dell'editore blocca l'accesso automatico (controllo anti-robot): serve il PDF da Alessandro. Non aggirare i controlli anti-robot.
-2. **Errore sistematico con una sola valle (test 4).** Con un solo prelievo la stima sovrastima la clearance in media del 5,8%, oltre il margine del 5% fissato prima dei risultati. La causa è il termine ln(varianza) della massima a posteriori standard, la stessa delle stime FOCE-I dell'articolo (senza quel termine: +2,3%). Il test è segnato `xfail(strict=True)` come fallimento noto. Proposta ad Alessandro: tenere il metodo standard e dichiarare l'errore (+6% con una valle, che va nella direzione prudente), invece di cambiare metodo per far passare il test. In attesa di risposta.
 
 ## Come Alessandro prova il prototipo
 - Lavora da iPad. Le parti senza interfaccia le vede su GitHub (pagina `docs/confronto_articolo.md` e segno verde dei test nella scheda Actions).
@@ -71,6 +70,7 @@ Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L,
 - Albumina in g/dL, come nell'articolo (41 g/L = 4,1 g/dL).
 - Stima bayesiana: massima a posteriori su eta_CL ed eta_V1. La funzione obiettivo comprende il termine ln(varianza), perché con l'errore combinato la varianza dipende dalla previsione. Ricerca con Nelder-Mead da 3 punti di partenza.
 - **Livelli sotto 0,1 µg/mL: metodo M3** (Beal 2001), scelto da Alessandro (opzione A). È dichiarato in `gemello.LIMITI` perché non viene dall'articolo.
+- **Errore sistematico con una sola valle (opzione A di Alessandro):** si tiene la massima a posteriori standard, con il termine ln(varianza). Con un solo prelievo sovrastima la clearance di circa il 6% (+2,3% senza quel termine); il limite è dichiarato in `gemello.LIMITI`. Nel test 4 il margine per un solo prelievo è al 10%, deciso dopo aver visto il risultato e scritto nel test; per gli altri disegni resta il 5%.
 - Test 4: 100 pazienti virtuali, tre modi di fare i prelievi (una valle, due valli, prelievi ACT 1). Misure: errore medio assoluto su CL e V1, errore mediano sulla valle della settimana 54 (la media è falsata dalle valli quasi a zero), errore sistematico come media geometrica dei rapporti, % di pazienti dal lato giusto della soglia di 3 µg/mL. Margini fissati prima dei risultati (vedi `tests/test_stima.py`).
 - I test girano su GitHub Actions a ogni modifica di `main` (`.github/workflows/test.yml`).
 - App: dati nella barra laterale, avvertenza in rosso in cima, risultato principale in parole, 4 riquadri numerici, grafico Altair (scala logaritmica di default, soglia tratteggiata con etichetta a sinistra, valli sotto soglia in rosso con legenda, mirino al tocco), tabella delle valli e limiti in fondo, sempre visibili. I test dell'app usano `streamlit.testing.v1.AppTest` e controllano che avvertenza e limiti compaiano.

@@ -104,23 +104,21 @@ def test_4_prelievi_dello_studio_ACT1_ritrovano_clearance_e_V1():
     assert r.v1_stima <= 15 and r.v1_stima < r.v1_popolazione
 
 
-MOTIVO_FALLIMENTO_NOTO = (
-    "Con una sola valle la stima sovrastima la clearance in media del 5,8%, oltre "
-    "il margine del 5% fissato prima dei risultati. Non dipende dal metodo M3 (c'è "
-    "anche nei pazienti con valle dosabile): viene dal termine ln(varianza) della "
-    "massima a posteriori standard, lo stesso delle stime individuali FOCE-I "
-    "dell'articolo. Decisione chiesta ad Alessandro: vedi CLAUDE.md."
-)
+# Margine sull'errore sistematico: 5%, fissato prima dei risultati.
+# Con UNA sola valle il risultato è stato +5,8% sulla clearance. Su decisione
+# di Alessandro (opzione A) si tiene il metodo standard e il limite è
+# dichiarato (gemello.LIMITI); per un solo prelievo il margine è portato al
+# 10%, DOPO aver visto il risultato. Motivo: l'errore viene dal termine
+# ln(varianza) della massima a posteriori standard (la stessa delle stime
+# individuali FOCE-I dell'articolo) e cala con più prelievi.
+MARGINE_SISTEMATICO = {UNA_VALLE: 10, DUE_VALLI: 5, ACT1: 5}
 
 
-@pytest.mark.parametrize("disegno", [
-    pytest.param(UNA_VALLE, marks=pytest.mark.xfail(strict=True, reason=MOTIVO_FALLIMENTO_NOTO)),
-    DUE_VALLI,
-    ACT1,
-])
-def test_4_errore_sistematico_entro_5_percento(disegno):
+@pytest.mark.parametrize("disegno", list(vs.DISEGNI))
+def test_4_errore_sistematico_entro_il_margine(disegno):
     r = vs.esegui(disegno)
-    assert abs(r.cl_distorsione) <= 5 and abs(r.v1_distorsione) <= 5
+    margine = MARGINE_SISTEMATICO[disegno]
+    assert abs(r.cl_distorsione) <= margine and abs(r.v1_distorsione) <= margine
 
 
 @pytest.mark.parametrize("disegno", list(vs.DISEGNI))

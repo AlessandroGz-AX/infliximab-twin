@@ -28,6 +28,8 @@ Un paziente virtuale in cui si vede nel tempo la concentrazione di infliximab ne
 - Gli anticorpi anti-infliximab sono un sì/no valido per tutta la terapia, come nell'articolo, non dal momento in cui compaiono.
 - Peso e albumina sono i valori di partenza e restano costanti per tutta la simulazione, come nell'articolo.
 - I livelli sotto 0,1 µg/mL (il limite di quantificazione dello studio) entrano nella stima bayesiana come informazione "sotto 0,1" con il metodo M3 (Beal 2001), lo standard in farmacometria. È una scelta nostra: l'articolo non dice come li ha trattati.
+- Con un solo livello misurato la stima bayesiana tende a sovrastimare la clearance (in media di circa il 6% nei test su 100 pazienti virtuali), quindi a prevedere valli un po' più basse del vero. Con più livelli l'effetto cala: circa 3% con due, circa 1% con tredici.
+- Per aggiornare la curva con i livelli misurati si assume che le infusioni siano state fatte esattamente come nello schema di terapia indicato.
 <!-- fine limiti -->
 
 Le discrepanze trovate dentro l'articolo e i risultati dei controlli sono in [docs/confronto_articolo.md](docs/confronto_articolo.md).
