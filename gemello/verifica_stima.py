@@ -77,7 +77,7 @@ class Risultato:
     soglia_popolazione: float  # % di pazienti messi dal lato giusto della soglia di 3 µg/mL
     soglia_stima: float
     misure_totali: int
-    misure_escluse: int    # sotto il limite di quantificazione
+    misure_sotto_limite: int  # "sotto 0,1 µg/mL", usate con il metodo M3
 
 
 @lru_cache(maxsize=8)  # i test e il rapporto riusano gli stessi risultati
@@ -87,7 +87,7 @@ def esegui(disegno: str, n: int = N_PAZIENTI) -> Risultato:
     giorno_previsione = SETTIMANA_PREVISIONE * 7.0
     err = {k: [] for k in ("cl_pop", "cl", "v1_pop", "v1", "valle_pop", "valle")}
     lato_giusto = {"pop": [], "stima": []}
-    totali = escluse = 0
+    totali = sotto_limite = 0
 
     for paziente, eta_cl, eta_v1 in popolazione.genera(n, SEME_POPOLAZIONE):
         veri = m.parametri_individuali(paziente, eta_cl, eta_v1)
@@ -99,7 +99,7 @@ def esegui(disegno: str, n: int = N_PAZIENTI) -> Risultato:
                     + rng.normal(0, m.SIGMA_ADDITIVO, len(giorni)))
         stima = stima_map(paziente, dosi, [Misura(g, v) for g, v in zip(giorni, misurati)])
         totali += len(giorni)
-        escluse += len(stima.misure_escluse)
+        sotto_limite += len(stima.sotto_limite)
 
         def valle(parametri):
             return sim.concentrazione(giorno_previsione, parametri, dosi)[0]
@@ -133,7 +133,7 @@ def esegui(disegno: str, n: int = N_PAZIENTI) -> Risultato:
     return Risultato(disegno, medio("cl_pop"), medio("cl"), sistematico("cl"),
                      medio("v1_pop"), medio("v1"), sistematico("v1"),
                      mediano("valle_pop"), mediano("valle"),
-                     percentuale("pop"), percentuale("stima"), totali, escluse)
+                     percentuale("pop"), percentuale("stima"), totali, sotto_limite)
 
 
 def rapporto() -> str:
@@ -148,7 +148,7 @@ def rapporto() -> str:
         "",
         "| Prelievi | Errore medio su CL | Errore medio su V1 | Errore mediano sulla valle "
         "della settimana 54 | Pazienti messi dal lato giusto della soglia di 3 µg/mL "
-        "| Livelli sotto 0,1 µg/mL (esclusi) |",
+        "| Livelli sotto 0,1 µg/mL (usati con il metodo M3) |",
         "|---|---|---|---|---|---|",
     ]
     def segno(x: float) -> str:
@@ -161,7 +161,7 @@ def rapporto() -> str:
             f"| {p(r.v1_popolazione)} → **{p(r.v1_stima)}** "
             f"| {p(r.valle_popolazione)} → **{p(r.valle_stima)}** "
             f"| {p(r.soglia_popolazione)} → **{p(r.soglia_stima)}** "
-            f"| {r.misure_escluse} su {r.misure_totali} |")
+            f"| {r.misure_sotto_limite} su {r.misure_totali} |")
     righe += [
         "",
         "Errore sistematico della stima (media geometrica dei rapporti stimato/vero): "

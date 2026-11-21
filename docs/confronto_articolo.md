@@ -31,7 +31,7 @@ Le parti tra i segnaposto si rigenerano dal codice con `python -m gemello.docume
 - Il modello viene da adulti (18-81 anni) con colite ulcerosa da moderata a grave, trattati negli studi ACT 1 e ACT 2 con 5 o 10 mg/kg: non vale automaticamente per altre malattie, per i bambini o per altri dosaggi.
 - Gli anticorpi anti-infliximab sono un sì/no valido per tutta la terapia, come nell'articolo, non dal momento in cui compaiono.
 - Peso e albumina sono i valori di partenza e restano costanti per tutta la simulazione, come nell'articolo.
-- I livelli sotto 0,1 µg/mL (il limite di quantificazione dello studio) non vengono usati dalla stima bayesiana, perché l'articolo non dice come li ha trattati. Un livello non dosabile, che spesso indica una clearance alta o la presenza di anticorpi, oggi quindi non sposta la curva.
+- I livelli sotto 0,1 µg/mL (il limite di quantificazione dello studio) entrano nella stima bayesiana come informazione "sotto 0,1" con il metodo M3 (Beal 2001), lo standard in farmacometria. È una scelta nostra: l'articolo non dice come li ha trattati.
 <!-- fine limiti -->
 
 ## Punti che l'articolo non chiarisce, e come li abbiamo risolti
@@ -80,18 +80,19 @@ Come funziona: 100 pazienti virtuali con parametri veri noti. Per ognuno le misu
 <!-- inizio test 4 -->
 100 pazienti virtuali, schema 5 mg/kg alle settimane 0, 2, 6 e poi ogni 8. "Senza misure" = solo i valori tipici del paziente; "con stima" = dopo la stima bayesiana.
 
-| Prelievi | Errore medio su CL | Errore medio su V1 | Errore mediano sulla valle della settimana 54 | Pazienti messi dal lato giusto della soglia di 3 µg/mL | Livelli sotto 0,1 µg/mL (esclusi) |
+| Prelievi | Errore medio su CL | Errore medio su V1 | Errore mediano sulla valle della settimana 54 | Pazienti messi dal lato giusto della soglia di 3 µg/mL | Livelli sotto 0,1 µg/mL (usati con il metodo M3) |
 |---|---|---|---|---|---|
-| Una valle (settimana 14) | 33% → **16%** | 17% → **17%** | 61% → **27%** | 68% → **88%** | 6 su 100 |
-| Due valli (settimane 14 e 22) | 33% → **11%** | 17% → **17%** | 61% → **16%** | 68% → **90%** | 7 su 200 |
+| Una valle (settimana 14) | 33% → **15%** | 17% → **17%** | 61% → **26%** | 68% → **88%** | 6 su 100 |
+| Due valli (settimane 14 e 22) | 33% → **10%** | 17% → **17%** | 61% → **16%** | 68% → **90%** | 7 su 200 |
 | Prelievi dello studio ACT 1 (13) | 33% → **6%** | 17% → **13%** | 61% → **9%** | 68% → **97%** | 40 su 1300 |
 
-Errore sistematico della stima (media geometrica dei rapporti stimato/vero): Una valle (settimana 14): CL +2,5%, V1 -0,9%; Due valli (settimane 14 e 22): CL +1,7%, V1 -0,9%; Prelievi dello studio ACT 1 (13): CL +1,1%, V1 +0,1%.
+Errore sistematico della stima (media geometrica dei rapporti stimato/vero): Una valle (settimana 14): CL +5,8%, V1 -1,3%; Due valli (settimane 14 e 22): CL +2,9%, V1 -1,0%; Prelievi dello studio ACT 1 (13): CL +1,3%, V1 +0,0%.
 <!-- fine test 4 -->
 
 Come leggerli:
 - **Clearance (CL).** È il parametro che decide le valli, e la stima la ritrova bene già con un solo livello misurato.
 - **V1.** Con sole valli cambia poco: le valli contengono poca informazione su V1 e la stima resta vicina al valore tipico, che è il comportamento corretto di una stima bayesiana. Per stimare V1 servono livelli presi subito dopo l'infusione.
 - **Rumore.** Il rumore del modello è alto (errore proporzionale 40,3%, Tabella 3): ogni singolo livello ha una grande incertezza, ed è il motivo principale degli errori che restano.
-- **Livelli sotto 0,1 µg/mL.** Oggi sono esclusi dalla stima (vedi i limiti). I pazienti con valle non dosabile restano quindi al valore tipico, ed è lì che la stima sbaglia di più.
+- **Livelli sotto 0,1 µg/mL.** Entrano nella stima con il metodo M3 (vedi i limiti). Una valle non dosabile fa salire la clearance stimata, come deve.
+- **Errore sistematico con una sola valle.** La stima sovrastima la clearance in media del 5,8%, oltre il margine del 5% che avevamo fissato, quindi prevede valli un po' più basse del vero. Non dipende dal metodo M3: c'è anche nei pazienti con valle dosabile (+5,9%). Viene dal termine ln(varianza) della stima standard, la stessa delle stime individuali FOCE-I dell'articolo. Senza quel termine scenderebbe a +2,3%, con lo stesso errore medio. Con due valli scende a +2,9% e con i prelievi ACT 1 a +1,3%. Il test è segnato come "fallimento noto" in attesa della decisione di Alessandro.
 - **Margini.** Sono stati fissati prima dei risultati: CL entro il 20% con una valle; entro il 15% con due valli, e almeno dimezzato rispetto a senza misure; entro il 10% con i prelievi ACT 1. V1 entro il 15% con i prelievi ACT 1. Errore sistematico entro ±5%. Mai peggio del modello senza misure.

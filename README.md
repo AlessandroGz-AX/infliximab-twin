@@ -27,7 +27,7 @@ Un paziente virtuale in cui si vede nel tempo la concentrazione di infliximab ne
 - Il modello viene da adulti (18-81 anni) con colite ulcerosa da moderata a grave, trattati negli studi ACT 1 e ACT 2 con 5 o 10 mg/kg: non vale automaticamente per altre malattie, per i bambini o per altri dosaggi.
 - Gli anticorpi anti-infliximab sono un sì/no valido per tutta la terapia, come nell'articolo, non dal momento in cui compaiono.
 - Peso e albumina sono i valori di partenza e restano costanti per tutta la simulazione, come nell'articolo.
-- I livelli sotto 0,1 µg/mL (il limite di quantificazione dello studio) non vengono usati dalla stima bayesiana, perché l'articolo non dice come li ha trattati. Un livello non dosabile, che spesso indica una clearance alta o la presenza di anticorpi, oggi quindi non sposta la curva.
+- I livelli sotto 0,1 µg/mL (il limite di quantificazione dello studio) entrano nella stima bayesiana come informazione "sotto 0,1" con il metodo M3 (Beal 2001), lo standard in farmacometria. È una scelta nostra: l'articolo non dice come li ha trattati.
 <!-- fine limiti -->
 
 Le discrepanze trovate dentro l'articolo e i risultati dei controlli sono in [docs/confronto_articolo.md](docs/confronto_articolo.md).

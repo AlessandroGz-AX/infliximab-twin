@@ -56,7 +56,7 @@ Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L,
 
 ## Domande aperte
 1. **Numeri di Adedokun 2014 da verificare** sull'articolo originale. Il sito dell'editore blocca l'accesso automatico (controllo anti-robot): serve il PDF da Alessandro. Non aggirare i controlli anti-robot.
-2. **Livelli sotto 0,1 µg/mL (limite di quantificazione).** Oggi la stima li esclude, perché l'articolo non dice come li ha trattati. Così però un livello non dosabile non sposta la curva. Proposta ad Alessandro: metodo M3 (Beal 2001, standard in farmacometria), che usa l'informazione "sotto 0,1" con lo stesso errore residuo del modello. In attesa di risposta.
+2. **Errore sistematico con una sola valle (test 4).** Con un solo prelievo la stima sovrastima la clearance in media del 5,8%, oltre il margine del 5% fissato prima dei risultati. La causa è il termine ln(varianza) della massima a posteriori standard, la stessa delle stime FOCE-I dell'articolo (senza quel termine: +2,3%). Il test è segnato `xfail(strict=True)` come fallimento noto. Proposta ad Alessandro: tenere il metodo standard e dichiarare l'errore (+6% con una valle, che va nella direzione prudente), invece di cambiare metodo per far passare il test. In attesa di risposta.
 
 ## Come Alessandro prova il prototipo
 - Lavora da iPad. Le parti senza interfaccia le vede su GitHub (pagina `docs/confronto_articolo.md` e segno verde dei test nella scheda Actions).
@@ -70,6 +70,7 @@ Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L,
 - Test 3: emivita mediana sulla popolazione virtuale (articolo p. 1221) + livelli di Adedokun 2014. Margini fissati prima dei risultati: mediana 14 ± 1 giorno, quartili ± 1,5 giorni, livelli tra le mediane dei due gruppi.
 - Albumina in g/dL, come nell'articolo (41 g/L = 4,1 g/dL).
 - Stima bayesiana: massima a posteriori su eta_CL ed eta_V1. La funzione obiettivo comprende il termine ln(varianza), perché con l'errore combinato la varianza dipende dalla previsione. Ricerca con Nelder-Mead da 3 punti di partenza.
+- **Livelli sotto 0,1 µg/mL: metodo M3** (Beal 2001), scelto da Alessandro (opzione A). È dichiarato in `gemello.LIMITI` perché non viene dall'articolo.
 - Test 4: 100 pazienti virtuali, tre modi di fare i prelievi (una valle, due valli, prelievi ACT 1). Misure: errore medio assoluto su CL e V1, errore mediano sulla valle della settimana 54 (la media è falsata dalle valli quasi a zero), errore sistematico come media geometrica dei rapporti, % di pazienti dal lato giusto della soglia di 3 µg/mL. Margini fissati prima dei risultati (vedi `tests/test_stima.py`).
 - I test girano su GitHub Actions a ogni modifica di `main` (`.github/workflows/test.yml`).
 
