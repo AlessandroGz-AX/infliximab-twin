@@ -19,18 +19,47 @@ from gemello import modello as m
 from gemello import simulazione as sim
 from gemello.grafici import grafico_concentrazione, grafico_confronto
 from gemello.stima import Misura, stima_map
+from gemello.verifica_stima import DISEGNI, ERRORE_CL_DICHIARATO
 
 DURATA_SETTIMANE = 54.0
-# Esempio dimostrativo: una valle più bassa del previsto alla settimana 14.
-SETTIMANA_ESEMPIO, LIVELLO_ESEMPIO = 14, 1.2
+OGGI = date.today()
+
+# Valori di partenza di tutti i campi dell'app (chiave del campo -> valore).
+PARTENZA = dict(
+    peso=77.0, sesso="Uomo", albumina=4.1, anticorpi=False,
+    mg_per_kg=5.0, induzione="0, 2, 6", intervallo=8, soglia=3.0,
+    data_prima=OGGI - timedelta(weeks=24), data_prelievo=OGGI - timedelta(weeks=10),
+    valore_livello=1.0, non_dosabile=False, scala_log=True,
+    confronta=False, settimana_cambio=14,
+    dose_a=10.0, intervallo_a=8, dose_b=5.0, intervallo_b=4,
+)
+
+# Caso dimostrativo: paziente tipico con una valle di 1,2 µg/mL alla settimana 14
+# (il modello se ne aspetta circa 3,25), poi confronto dalla settimana 14 tra
+# 10 mg/kg ogni 8 settimane e 5 mg/kg ogni 4 (stessa quantità totale di farmaco).
+SETTIMANA_DEMO, LIVELLO_DEMO = 14, 1.2
+CASO_DIMOSTRATIVO = dict(PARTENZA, confronta=True)
+CHIAVI_CHE_CONTANO = ["peso", "sesso", "albumina", "anticorpi", "mg_per_kg", "induzione",
+                      "intervallo", "soglia", "confronta", "settimana_cambio", "dose_a",
+                      "intervallo_a", "dose_b", "intervallo_b"]
 
 st.set_page_config(page_title="Gemello digitale dell'infliximab", page_icon="💉",
                    layout="wide")
+for chiave, valore in PARTENZA.items():
+    st.session_state.setdefault(chiave, valore)
+st.session_state.setdefault("livelli", [])  # livelli misurati inseriti dall'utente
 
 
 def numero(x: float, decimali: int = 1) -> str:
     """Numero con la virgola decimale all'italiana."""
     return f"{x:.{decimali}f}".replace(".", ",")
+
+
+def dose_testo(mg_per_kg: float, ogni: float) -> str:
+    """Es. "7,5 mg/kg ogni 6 sett." (virgola decimale solo nei numeri)."""
+    def g(x: float) -> str:
+        return f"{x:g}".replace(".", ",")
+    return f"{g(mg_per_kg)} mg/kg ogni {g(ogni)} sett."
 
 
 def variazione(rapporto: float, maschile: bool = False) -> str:
@@ -64,17 +93,35 @@ def tema_attuale() -> str:
         return "chiaro"
 
 
-def riassunto(parametri: m.ParametriPK, piano, peso: float, soglia: float) -> dict:
-    """Numeri chiave di uno schema di terapia per un paziente."""
+def riassunto(parametri: m.ParametriPK, piano, peso: float, soglia: float,
+              dopo_settimana: float | None = None) -> dict:
+    """Numeri chiave di uno schema; con `dopo_settimana` conta solo il tempo successivo."""
     valli = sim.concentrazioni_minime(parametri, piano, peso)
     periodi = sim.periodi_sotto_soglia(parametri, piano, peso, soglia)
-    return dict(valli=valli, prima_sotto=sim.primo_minimo_sotto_soglia(valli, soglia),
-                giorni_sotto=sum(fine - inizio for inizio, fine in periodi) * 7,
+    return dict(valli=valli,
+                prima_sotto=sim.primo_minimo_sotto_soglia(valli, soglia, dopo_settimana),
+                giorni_sotto=sim.giorni_sotto_soglia(periodi, dopo_settimana or 0.0),
                 dose_totale=sim.dose_totale_mg(piano, peso))
 
 
-st.session_state.setdefault("livelli", [])  # livelli misurati inseriti dall'utente
-oggi = date.today()
+def carica_caso_dimostrativo() -> None:
+    """Riporta tutti i campi ai valori del caso dimostrativo."""
+    for chiave, valore in CASO_DIMOSTRATIVO.items():
+        st.session_state[chiave] = valore
+    st.session_state.livelli = [dict(
+        data=CASO_DIMOSTRATIVO["data_prima"] + timedelta(weeks=SETTIMANA_DEMO),
+        valore=LIVELLO_DEMO, non_dosabile=False)]
+
+
+def caso_dimostrativo_attivo() -> bool:
+    """Vero solo se i campi sono ancora quelli del caso dimostrativo."""
+    if any(st.session_state.get(k) != CASO_DIMOSTRATIVO[k] for k in CHIAVI_CHE_CONTANO):
+        return False
+    livelli = st.session_state.livelli
+    return (len(livelli) == 1 and not livelli[0]["non_dosabile"]
+            and livelli[0]["valore"] == LIVELLO_DEMO
+            and (livelli[0]["data"] - st.session_state.data_prima).days == SETTIMANA_DEMO * 7)
+
 
 # ---------------------------------------------------------------------
 # Intestazione e avvertenza, sempre in vista
@@ -84,47 +131,49 @@ st.error(f"**{AVVERTENZA}**", icon="⚠️")
 st.caption("Paziente virtuale: concentrazione di infliximab nel sangue calcolata con il "
            "modello di popolazione di Fasanmade et al., Eur J Clin Pharmacol 2009 "
            "(adulti con colite ulcerosa). I limiti del modello sono in fondo alla pagina.")
+st.button("Caso dimostrativo", key="caso_dimostrativo", icon="▶️",
+          on_click=carica_caso_dimostrativo,
+          help=f"Paziente tipico con una valle di {numero(LIVELLO_DEMO)} µg/mL alla settimana "
+               f"{SETTIMANA_DEMO}, e confronto tra due schemi alternativi.")
 
 # ---------------------------------------------------------------------
 # Dati inseriti dall'utente (barra laterale)
 # ---------------------------------------------------------------------
 with st.sidebar:
     st.header("Paziente")
-    peso = st.number_input("Peso (kg)", min_value=20.0, max_value=250.0, value=77.0, step=1.0,
-                           format="%.0f")
-    sesso = st.radio("Sesso", ["Uomo", "Donna"], horizontal=True)
-    albumina = st.number_input("Albumina (g/dL)", min_value=1.0, max_value=6.5, value=4.1,
-                               step=0.1, format="%.1f",
+    peso = st.number_input("Peso (kg)", min_value=20.0, max_value=250.0, step=1.0,
+                           format="%.0f", key="peso")
+    sesso = st.radio("Sesso", ["Uomo", "Donna"], horizontal=True, key="sesso")
+    albumina = st.number_input("Albumina (g/dL)", min_value=1.0, max_value=6.5, step=0.1,
+                               format="%.1f", key="albumina",
                                help="Albumina nel sangue prima della terapia. "
                                     "41 g/L corrispondono a 4,1 g/dL.")
-    anticorpi = st.toggle("Anticorpi anti-infliximab positivi")
+    anticorpi = st.toggle("Anticorpi anti-infliximab positivi", key="anticorpi")
 
     st.header("Schema di terapia")
     mg_per_kg = st.number_input("Dose per infusione (mg/kg)", min_value=1.0, max_value=20.0,
-                                value=5.0, step=0.5, format="%.1f")
-    testo_induzione = st.text_input("Settimane delle infusioni iniziali", value="0, 2, 6")
+                                step=0.5, format="%.1f", key="mg_per_kg")
+    testo_induzione = st.text_input("Settimane delle infusioni iniziali", key="induzione")
     intervallo = st.number_input("Poi un'infusione ogni (settimane)", min_value=1, max_value=16,
-                                 value=8, step=1)
+                                 step=1, key="intervallo")
 
     st.header("Soglia")
     soglia = st.number_input("Soglia della concentrazione minima (µg/mL)", min_value=0.1,
-                             max_value=50.0, value=3.0, step=0.5, format="%.1f")
+                             max_value=50.0, step=0.5, format="%.1f", key="soglia")
 
     st.header("Livelli misurati")
     st.caption("Esami del sangue con il livello di infliximab. Si assume che le infusioni "
                "siano state fatte come nello schema qui sopra.")
-    data_prima = st.date_input("Data della prima infusione", value=oggi - timedelta(weeks=24),
-                               format="DD/MM/YYYY", key="data_prima")
+    data_prima = st.date_input("Data della prima infusione", format="DD/MM/YYYY",
+                               key="data_prima")
     data_prelievo = st.date_input(
-        "Data del prelievo", value=oggi - timedelta(weeks=10), format="DD/MM/YYYY",
-        key="data_prelievo",
+        "Data del prelievo", format="DD/MM/YYYY", key="data_prelievo",
         help="Un prelievo fatto il giorno di un'infusione vale come fatto prima "
              "dell'infusione (concentrazione minima).")
     valore = st.number_input("Livello misurato (µg/mL)", min_value=0.0, max_value=1000.0,
-                             value=1.0, step=0.1, format="%.2f", key="valore_livello")
+                             step=0.1, format="%.2f", key="valore_livello")
     non_dosabile = st.checkbox("Non dosabile (sotto 0,1 µg/mL)", key="non_dosabile")
-    colonna_a, colonna_b = st.columns(2)
-    if colonna_a.button("Aggiungi", key="aggiungi", type="primary", width="stretch"):
+    if st.button("Aggiungi livello", key="aggiungi", type="primary", width="stretch"):
         giorno = (data_prelievo - data_prima).days
         if giorno <= 0:
             st.error("Il prelievo deve essere successivo alla prima infusione.")
@@ -136,12 +185,6 @@ with st.sidebar:
             st.session_state.livelli.append(dict(data=data_prelievo,
                                                  valore=0.0 if sotto else valore,
                                                  non_dosabile=sotto))
-    if colonna_b.button("Esempio", key="esempio", width="stretch",
-                        help=f"Aggiunge una valle di {numero(LIVELLO_ESEMPIO)} µg/mL alla "
-                             f"settimana {SETTIMANA_ESEMPIO}."):
-        st.session_state.livelli.append(dict(
-            data=data_prima + timedelta(weeks=SETTIMANA_ESEMPIO),
-            valore=LIVELLO_ESEMPIO, non_dosabile=False))
 
     for i, livello in enumerate(list(st.session_state.livelli)):
         settimana = (livello["data"] - data_prima).days / 7
@@ -156,7 +199,7 @@ with st.sidebar:
         st.rerun()
 
     st.header("Grafico")
-    scala_log = st.toggle("Scala logaritmica", value=True,
+    scala_log = st.toggle("Scala logaritmica", key="scala_log",
                           help="Fa vedere bene sia i picchi dopo l'infusione sia i valori "
                                "minimi vicino alla soglia.")
 
@@ -207,12 +250,17 @@ valli, prima_sotto, giorni_sotto = attuale["valli"], attuale["prima_sotto"], att
 # Risultato principale, in parole
 # ---------------------------------------------------------------------
 if misure:
+    una_valle, due_valli = list(DISEGNI)[:2]
     st.info(f"Curva aggiornata con {len(misure)} "
             f"{'livello misurato' if len(misure) == 1 else 'livelli misurati'} (stima bayesiana). "
             f"Rispetto a quanto previsto per questo paziente, la clearance stimata è "
             f"{variazione(parametri.CL / parametri_prima.CL)} e il volume centrale "
             f"{variazione(parametri.V1 / parametri_prima.V1, maschile=True)}.",
             icon="🩸")
+    st.caption("La stima bayesiana è stata verificata solo su pazienti virtuali (100 pazienti "
+               "simulati, test 4), non su pazienti reali: errore medio sulla clearance circa "
+               f"{ERRORE_CL_DICHIARATO[una_valle]}% con un livello misurato e "
+               f"{ERRORE_CL_DICHIARATO[due_valli]}% con due.")
     if stima.sotto_limite:
         st.caption("I livelli non dosabili sono usati come informazione \"sotto 0,1 µg/mL\" "
                    "(metodo M3).")
@@ -260,47 +308,71 @@ with st.expander("Tabella delle concentrazioni minime (valli)"):
 # Cosa succederebbe se...
 # ---------------------------------------------------------------------
 st.subheader("Cosa succederebbe se...")
-st.caption("Confronta lo schema attuale con un'alternativa che parte da una certa settimana. "
-           "Il confronto usa la curva "
+st.caption("Confronta lo schema attuale con due alternative che partono dalla stessa "
+           "settimana. Il confronto usa la curva "
            + ("aggiornata con i livelli misurati." if misure else "del modello di popolazione."))
-if st.toggle("Confronta con uno schema alternativo", key="confronta"):
-    a, b, c = st.columns(3)
-    settimana_cambio = a.number_input("Dalla settimana", min_value=1,
-                                      max_value=int(DURATA_SETTIMANE) - 1, value=14, step=1,
-                                      key="settimana_cambio")
-    nuova_dose = b.number_input("Nuova dose (mg/kg)", min_value=1.0, max_value=20.0,
-                                value=10.0, step=0.5, format="%.1f", key="nuova_dose")
-    nuovo_intervallo = c.number_input("Un'infusione ogni (settimane)", min_value=1,
-                                      max_value=16, value=8, step=1, key="nuovo_intervallo")
-    alternativo = sim.SchemaConCambio(base=schema, settimana_cambio=float(settimana_cambio),
-                                      mg_per_kg=nuova_dose,
-                                      intervallo_settimane=float(nuovo_intervallo))
-    altro = riassunto(parametri, alternativo, peso, soglia)
+if st.toggle("Confronta con schemi alternativi", key="confronta"):
+    settimana_cambio = st.number_input("Le alternative partono dalla settimana", min_value=1,
+                                       max_value=int(DURATA_SETTIMANE) - 1, step=1,
+                                       key="settimana_cambio")
+    colonna_a, colonna_b = st.columns(2)
+    with colonna_a:
+        st.markdown("**Alternativa A**")
+        dose_a = st.number_input("Dose (mg/kg)", min_value=1.0, max_value=20.0, step=0.5,
+                                 format="%.1f", key="dose_a")
+        intervallo_a = st.number_input("Un'infusione ogni (settimane)", min_value=1,
+                                       max_value=16, step=1, key="intervallo_a")
+    with colonna_b:
+        st.markdown("**Alternativa B**")
+        dose_b = st.number_input("Dose (mg/kg)", min_value=1.0, max_value=20.0, step=0.5,
+                                 format="%.1f", key="dose_b")
+        intervallo_b = st.number_input("Un'infusione ogni (settimane)", min_value=1,
+                                       max_value=16, step=1, key="intervallo_b")
 
-    # Stessa griglia di tempi per le due curve (servono gli istanti di entrambi gli schemi).
-    tempi = np.union1d(sim.curva(parametri, schema, peso)[0],
-                       sim.curva(parametri, alternativo, peso)[0])
-    giorni = tempi * sim.GIORNI_PER_SETTIMANA
-    conc_attuale = sim.concentrazione(giorni, parametri, schema.dosi(peso))
-    conc_alternativo = sim.concentrazione(giorni, parametri, alternativo.dosi(peso))
+    cambio = float(settimana_cambio)
+    piani = {  # nome nella tabella -> (descrizione dello schema, piano di dosi)
+        "Schema attuale": (dose_testo(mg_per_kg, intervallo), schema),
+        "Alternativa A": (dose_testo(dose_a, intervallo_a),
+                          sim.SchemaConCambio(schema, cambio, dose_a, float(intervallo_a))),
+        "Alternativa B": (dose_testo(dose_b, intervallo_b),
+                          sim.SchemaConCambio(schema, cambio, dose_b, float(intervallo_b))),
+    }
+    riassunti = {nome: riassunto(parametri, piano, peso, soglia, dopo_settimana=cambio)
+                 for nome, (_, piano) in piani.items()}
 
-    def colonna(r) -> list[str]:
+    def colonna(descrizione: str, r: dict) -> list[str]:
         ultima = (f"{numero(r['valli'][-1][1], 2)} µg/mL (sett. {r['valli'][-1][0]:g})"
                   if r["valli"] else "-")
-        return ["Nessuna" if r["prima_sotto"] is None else f"Settimana {r['prima_sotto'][0]:g}",
+        return [descrizione,
+                "Nessuna" if r["prima_sotto"] is None else f"Settimana {r['prima_sotto'][0]:g}",
                 f"{r['giorni_sotto']:.0f}", ultima,
                 f"{r['dose_totale']:,.0f} mg".replace(",", ".")]
 
-    st.dataframe(pd.DataFrame({
-        "": ["Prima valle sotto soglia", "Giorni sotto soglia", "Ultima valle",
-             f"Farmaco totale in {DURATA_SETTIMANE:g} settimane"],
-        "Schema attuale": colonna(attuale),
-        "Schema alternativo": colonna(altro),
-    }), hide_index=True)
-    st.altair_chart(grafico_confronto(tempi, conc_attuale, conc_alternativo, soglia,
-                                      scala_log=scala_log, tema=tema_attuale(),
-                                      durata_settimane=DURATA_SETTIMANE),
+    tabella = {"": [f"Schema dalla settimana {cambio:g}",
+                    "Prima valle sotto soglia dopo il cambio",
+                    "Giorni sotto soglia dopo il cambio", "Ultima valle",
+                    f"Farmaco totale in {DURATA_SETTIMANE:g} settimane"]}
+    for nome, (descrizione, _) in piani.items():
+        tabella[nome] = colonna(descrizione, riassunti[nome])
+    st.dataframe(pd.DataFrame(tabella), hide_index=True)
+
+    # Stessa griglia di tempi per le tre curve (servono gli istanti di tutti gli schemi).
+    tempi = np.unique(np.concatenate([sim.curva(parametri, piano, peso)[0]
+                                      for _, piano in piani.values()]))
+    giorni = tempi * sim.GIORNI_PER_SETTIMANA
+    curve = {f"{nome}: {descrizione}": sim.concentrazione(giorni, parametri, piano.dosi(peso))
+             for nome, (descrizione, piano) in piani.items()}
+    st.altair_chart(grafico_confronto(tempi, curve, soglia, scala_log=scala_log,
+                                      tema=tema_attuale(), durata_settimane=DURATA_SETTIMANE),
                     width="stretch")
+
+    if caso_dimostrativo_attivo():
+        farmaco = f"{riassunti['Alternativa A']['dose_totale']:,.0f} mg".replace(",", ".")
+        st.info(f"Caso dimostrativo: a parità di farmaco totale ({farmaco} in "
+                f"{DURATA_SETTIMANE:g} settimane), raddoppiare la dose ogni 8 settimane lascia "
+                "ancora il paziente sotto soglia prima di ogni infusione, mentre 5 mg/kg ogni "
+                "4 settimane lo mantiene sopra soglia dopo il cambio: è un paziente virtuale, "
+                "non un consiglio di terapia.", icon="💡")
 
 # ---------------------------------------------------------------------
 # Parametri del paziente e limiti
@@ -313,13 +385,14 @@ def formatta(p: m.ParametriPK) -> list[str]:
             f"{numero(p.Q, 2)} L/giorno"]
 
 
-tabella = {"Parametro": ["Clearance (CL)", "Volume centrale (V1)", "Volume periferico (V2)",
-                         "Clearance intercompartimentale (Q)"],
-           "Prima dei livelli misurati": formatta(parametri_prima)}
+tabella_parametri = {"Parametro": ["Clearance (CL)", "Volume centrale (V1)",
+                                   "Volume periferico (V2)",
+                                   "Clearance intercompartimentale (Q)"],
+                     "Prima dei livelli misurati": formatta(parametri_prima)}
 if misure:
-    tabella["Dopo i livelli misurati"] = formatta(parametri)
-tabella["Paziente tipico dell'articolo"] = formatta(m.parametri_tipici(m.PAZIENTE_TIPICO))
-st.dataframe(pd.DataFrame(tabella), hide_index=True)
+    tabella_parametri["Dopo i livelli misurati"] = formatta(parametri)
+tabella_parametri["Paziente tipico dell'articolo"] = formatta(m.parametri_tipici(m.PAZIENTE_TIPICO))
+st.dataframe(pd.DataFrame(tabella_parametri), hide_index=True)
 st.caption("\"Prima\" = valori attesi per un paziente con queste caratteristiche. \"Dopo\" = "
            "stima bayesiana che tiene conto dei livelli misurati (cambiano solo CL e V1, gli "
            "unici con variabilità tra pazienti). Paziente tipico: uomo, 77 kg, albumina "

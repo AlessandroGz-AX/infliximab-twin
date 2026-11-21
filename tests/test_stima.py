@@ -104,21 +104,33 @@ def test_4_prelievi_dello_studio_ACT1_ritrovano_clearance_e_V1():
     assert r.v1_stima <= 15 and r.v1_stima < r.v1_popolazione
 
 
-# Margine sull'errore sistematico: 5%, fissato prima dei risultati.
-# Con UNA sola valle il risultato è stato +5,8% sulla clearance. Su decisione
-# di Alessandro (opzione A) si tiene il metodo standard e il limite è
-# dichiarato (gemello.LIMITI); per un solo prelievo il margine è portato al
-# 10%, DOPO aver visto il risultato. Motivo: l'errore viene dal termine
-# ln(varianza) della massima a posteriori standard (la stessa delle stime
-# individuali FOCE-I dell'articolo) e cala con più prelievi.
-MARGINE_SISTEMATICO = {UNA_VALLE: 10, DUE_VALLI: 5, ACT1: 5}
+# Margine sull'errore sistematico: 5%, fissato prima dei risultati, e non si
+# sposta dopo averli visti. Con UNA sola valle il test non lo rispetta: è
+# segnato come difetto noto (xfail strict), con la spiegazione.
+MOTIVO_DIFETTO_NOTO = (
+    "Difetto noto: con una sola valle la stima sovrastima la clearance in media del "
+    "5,8%, oltre il margine del 5% fissato prima dei risultati. Viene dal termine "
+    "ln(varianza) della massima a posteriori standard, la stessa delle stime "
+    "individuali FOCE-I dell'articolo (senza quel termine sarebbe +2,3%). Si tiene il "
+    "metodo standard e il limite è dichiarato in gemello.LIMITI. Con più prelievi "
+    "l'errore rientra nel margine."
+)
 
 
-@pytest.mark.parametrize("disegno", list(vs.DISEGNI))
-def test_4_errore_sistematico_entro_il_margine(disegno):
+@pytest.mark.parametrize("disegno", [
+    pytest.param(UNA_VALLE, marks=pytest.mark.xfail(strict=True, reason=MOTIVO_DIFETTO_NOTO)),
+    DUE_VALLI,
+    ACT1,
+])
+def test_4_errore_sistematico_entro_5_percento(disegno):
     r = vs.esegui(disegno)
-    margine = MARGINE_SISTEMATICO[disegno]
-    assert abs(r.cl_distorsione) <= margine and abs(r.v1_distorsione) <= margine
+    assert abs(r.cl_distorsione) <= 5 and abs(r.v1_distorsione) <= 5
+
+
+def test_4_numeri_dichiarati_nell_app_corrispondono_alla_verifica():
+    """L'app scrive l'errore medio della stima: deve restare vicino a quello calcolato."""
+    assert abs(vs.esegui(UNA_VALLE).cl_stima - vs.ERRORE_CL_DICHIARATO[UNA_VALLE]) <= 2
+    assert abs(vs.esegui(DUE_VALLI).cl_stima - vs.ERRORE_CL_DICHIARATO[DUE_VALLI]) <= 2
 
 
 @pytest.mark.parametrize("disegno", list(vs.DISEGNI))

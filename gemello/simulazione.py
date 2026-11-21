@@ -193,13 +193,25 @@ def concentrazioni_minime(parametri: m.ParametriPK, schema: Schema,
     return list(zip(settimane, valori.tolist()))
 
 
-def primo_minimo_sotto_soglia(minimi: list[tuple[float, float]],
-                              soglia: float) -> tuple[float, float] | None:
-    """Prima valle sotto la soglia, come (settimana, valore); None se non succede."""
+def primo_minimo_sotto_soglia(minimi: list[tuple[float, float]], soglia: float,
+                              dopo_settimana: float | None = None) -> tuple[float, float] | None:
+    """
+    Prima valle sotto la soglia, come (settimana, valore); None se non succede.
+    Con `dopo_settimana` si contano solo le valli successive a quella settimana
+    (serve per confrontare schemi che cambiano da una certa settimana).
+    """
     for settimana, valore in minimi:
+        if dopo_settimana is not None and settimana <= dopo_settimana:
+            continue
         if valore < soglia:
             return settimana, valore
     return None
+
+
+def giorni_sotto_soglia(periodi: list[tuple[float, float]], dopo_settimana: float = 0.0) -> float:
+    """Giorni totali sotto soglia, contando solo il tempo dopo `dopo_settimana`."""
+    return sum(max(0.0, fine - max(inizio, dopo_settimana))
+               for inizio, fine in periodi) * GIORNI_PER_SETTIMANA
 
 
 def periodi_sotto_soglia(parametri: m.ParametriPK, schema: Schema, peso_kg: float,

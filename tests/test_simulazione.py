@@ -128,6 +128,16 @@ def test_valli_e_prima_valle_sotto_soglia_paziente_tipico():
     assert sim.primo_minimo_sotto_soglia(valli, 0.5) is None
 
 
+def test_valli_e_giorni_sotto_soglia_solo_dopo_una_certa_settimana():
+    valli = sim.concentrazioni_minime(TIPICO, sim.Schema(), PESO)
+    assert sim.primo_minimo_sotto_soglia(valli, 3.0, dopo_settimana=22)[0] == 30
+    assert sim.primo_minimo_sotto_soglia(valli, 3.0, dopo_settimana=54) is None
+    periodi = [(1.0, 2.0), (13.5, 14.0), (21.5, 22.5)]
+    assert sim.giorni_sotto_soglia(periodi) == pytest.approx((1 + 0.5 + 1) * 7)
+    assert sim.giorni_sotto_soglia(periodi, dopo_settimana=14) == pytest.approx(7.0)
+    assert sim.giorni_sotto_soglia(periodi, dopo_settimana=22) == pytest.approx(3.5)
+
+
 def test_periodi_sotto_soglia():
     schema = sim.Schema()
     dosi = schema.dosi(PESO)

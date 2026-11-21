@@ -67,14 +67,47 @@ def test_avviso_se_il_peso_e_fuori_dallo_studio():
 # fa, cioè alla settimana 14, dove il paziente tipico avrebbe circa 3,25 µg/mL)
 # ---------------------------------------------------------------------
 
-def test_esempio_valle_bassa_alza_la_clearance_e_aggiorna_la_curva():
+def tabella_confronto(app):
+    tabella = next(t.value for t in app.dataframe if "Alternativa B" in t.value.columns)
+    return tabella.set_index("")
+
+
+def test_caso_dimostrativo():
+    """
+    Valle di 1,2 µg/mL alla settimana 14 e confronto dalla settimana 14 tra
+    10 mg/kg ogni 8 settimane (A) e 5 mg/kg ogni 4 settimane (B).
+    """
     app = avvia_app()
-    app.button(key="esempio").click().run()
+    app.button(key="caso_dimostrativo").click().run()
     assert not app.exception
     messaggio = unisci_testo(app.info)
     assert "Curva aggiornata con 1 livello misurato" in messaggio
     assert "la clearance stimata è più alta" in messaggio
+    assert "verificata solo su pazienti virtuali" in unisci_testo(app.caption)
     assert any("Dopo i livelli misurati" in tabella.value.columns for tabella in app.dataframe)
+
+    righe = tabella_confronto(app)
+    assert righe.loc["Schema dalla settimana 14", "Alternativa A"] == "10 mg/kg ogni 8 sett."
+    assert righe.loc["Schema dalla settimana 14", "Alternativa B"] == "5 mg/kg ogni 4 sett."
+    # Stessa quantità di farmaco, risultato opposto dopo il cambio.
+    farmaco = "Farmaco totale in 54 settimane"
+    assert righe.loc[farmaco, "Alternativa A"] == righe.loc[farmaco, "Alternativa B"] == "5.005 mg"
+    dopo = "Prima valle sotto soglia dopo il cambio"
+    assert righe.loc[dopo, "Schema attuale"] == "Settimana 22"
+    assert righe.loc[dopo, "Alternativa A"] == "Settimana 22"
+    assert righe.loc[dopo, "Alternativa B"] == "Nessuna"
+    assert righe.loc["Giorni sotto soglia dopo il cambio", "Alternativa B"] == "0"
+
+    frase = unisci_testo(app.info)
+    assert "Caso dimostrativo" in frase
+    assert "paziente virtuale, non un consiglio di terapia" in frase
+
+
+def test_la_frase_del_caso_dimostrativo_sparisce_se_cambi_un_dato():
+    app = avvia_app()
+    app.button(key="caso_dimostrativo").click().run()
+    app.number_input(key="dose_b").set_value(6.0).run()
+    assert "Caso dimostrativo" not in unisci_testo(app.info)
 
 
 def test_livello_inserito_a_mano_e_poi_tolto():
@@ -102,13 +135,16 @@ def test_prelievo_prima_della_prima_infusione_rifiutato():
     assert len(app.info) == 0
 
 
-def test_confronto_con_uno_schema_alternativo():
-    """Di default: 10 mg/kg ogni 8 settimane dalla settimana 14."""
+def test_confronto_con_schemi_alternativi_senza_livelli_misurati():
+    """Di default, dalla settimana 14: A = 10 mg/kg ogni 8, B = 5 mg/kg ogni 4."""
     app = avvia_app()
     app.toggle(key="confronta").set_value(True).run()
     assert not app.exception
-    tabella = next(t.value for t in app.dataframe if "Schema alternativo" in t.value.columns)
-    righe = tabella.set_index("")
-    assert righe.loc["Prima valle sotto soglia", "Schema attuale"] == "Settimana 22"
-    assert righe.loc["Prima valle sotto soglia", "Schema alternativo"] == "Nessuna"
+    righe = tabella_confronto(app)
+    dopo = "Prima valle sotto soglia dopo il cambio"
+    assert righe.loc[dopo, "Schema attuale"] == "Settimana 22"
+    assert righe.loc[dopo, "Alternativa A"] == "Nessuna"
+    assert righe.loc[dopo, "Alternativa B"] == "Nessuna"
     assert righe.loc["Farmaco totale in 54 settimane", "Schema attuale"] == "3.080 mg"
+    # Senza il livello misurato non è il caso dimostrativo: niente frase.
+    assert "Caso dimostrativo" not in unisci_testo(app.info)

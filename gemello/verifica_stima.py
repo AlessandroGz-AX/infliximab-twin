@@ -60,6 +60,13 @@ DISEGNI = {
 
 SOGLIA = 3.0  # µg/mL, soglia di default dell'app
 
+# Errore medio sulla clearance scritto nell'app accanto ai risultati della stima
+# (percentuale arrotondata). Un test controlla che resti vicino a quello calcolato.
+ERRORE_CL_DICHIARATO = {
+    "Una valle (settimana 14)": 15,
+    "Due valli (settimane 14 e 22)": 10,
+}
+
 
 @dataclass(frozen=True)
 class Risultato:

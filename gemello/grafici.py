@@ -20,12 +20,12 @@ import pandas as pd
 from gemello.modello import LLOQ
 
 COLORI = {
-    "chiaro": dict(curva="#2a78d6", alternativo="#eb6834", allarme="#d03b3b",
-                   testo="#52514e", tenue="#898781", inchiostro="#0b0b0b",
-                   sfondo="#ffffff"),
-    "scuro": dict(curva="#3987e5", alternativo="#d95926", allarme="#d03b3b",
-                  testo="#c3c2b7", tenue="#898781", inchiostro="#f0efec",
-                  sfondo="#0e1117"),
+    "chiaro": dict(curva="#2a78d6", alternativo="#eb6834", terzo="#1baf7a",
+                   allarme="#d03b3b", testo="#52514e", tenue="#898781",
+                   inchiostro="#0b0b0b", sfondo="#ffffff"),
+    "scuro": dict(curva="#3987e5", alternativo="#d95926", terzo="#199e70",
+                  allarme="#d03b3b", testo="#c3c2b7", tenue="#898781",
+                  inchiostro="#f0efec", sfondo="#0e1117"),
 }
 
 # Numeri con la virgola decimale nel grafico.
@@ -176,36 +176,39 @@ def grafico_concentrazione(settimane, concentrazioni, valli, soglia: float,
     return alt.layer(*strati).properties(height=420).configure(locale=LOCALE_ITALIANO)
 
 
-def grafico_confronto(settimane, concentrazioni_attuale, concentrazioni_alternativo,
-                      soglia: float, scala_log: bool = True, tema: str = "chiaro",
-                      durata_settimane: float = 54.0) -> alt.LayerChart:
-    """Schema attuale (blu) contro schema alternativo (arancione), stessa soglia."""
+def grafico_confronto(settimane, curve: dict, soglia: float, scala_log: bool = True,
+                      tema: str = "chiaro", durata_settimane: float = 54.0) -> alt.LayerChart:
+    """
+    Confronto tra schemi di terapia (fino a tre curve), stessa soglia.
+    `curve` = {nome nella legenda: concentrazioni}, nell'ordine: schema
+    attuale (blu), prima alternativa (arancione), seconda (verde acqua).
+    """
     c = COLORI[tema]
-    larghi = pd.DataFrame({"Settimana": settimane, "Attuale": concentrazioni_attuale,
-                           "Alternativo": concentrazioni_alternativo})
+    nomi = list(curve)
+    colori = [c["curva"], c["alternativo"], c["terzo"]][:len(nomi)]
+    colonne = [f"c{i}" for i in range(len(nomi))]
+    larghi = pd.DataFrame({"Settimana": settimane,
+                           **{col: curve[nome] for col, nome in zip(colonne, nomi)}})
     if scala_log:
-        larghi = larghi[(larghi["Attuale"] > 0) & (larghi["Alternativo"] > 0)]
+        larghi = larghi[(larghi[colonne] > 0).all(axis=1)]
 
-    positivi = np.concatenate([larghi["Attuale"], larghi["Alternativo"]])
     # Il minimo delle curve, a parte i primi istanti, è vicino alle valli.
     dopo_inizio = larghi[larghi["Settimana"] > 1]
-    valori_bassi = [float(dopo_inizio["Attuale"].min()), float(dopo_inizio["Alternativo"].min()),
-                    soglia]
-    x, assi_y = _assi(valori_bassi, float(positivi.max()) * 1.3, scala_log, durata_settimane)
+    valori_bassi = [float(dopo_inizio[col].min()) for col in colonne] + [soglia]
+    massimo = float(larghi[colonne].to_numpy().max()) * 1.3
+    x, assi_y = _assi(valori_bassi, massimo, scala_log, durata_settimane)
 
-    nomi = ["Schema attuale", "Schema alternativo"]
-    scala_colori = alt.Scale(domain=nomi, range=[c["curva"], c["alternativo"]])
-    legenda = alt.Legend(title=None, orient="top")
-    # Prima l'alternativo, poi l'attuale sopra: fino al cambio le curve coincidono
-    # e il tratto comune resta del colore dello schema attuale.
+    scala_colori = alt.Scale(domain=nomi, range=colori)
+    legenda = alt.Legend(title=None, orient="top", direction="vertical", labelLimit=320)
+    # Si disegna dall'ultima alla prima: fino al cambio le curve coincidono e il
+    # tratto comune resta del colore dello schema attuale.
     strati = [
         alt.Chart(larghi.assign(Curva=nome)).mark_line(
             strokeWidth=2, strokeCap="round", strokeJoin="round").encode(
-            x=x, y=_y(colonna, assi_y),
+            x=x, y=_y(col, assi_y),
             color=alt.Color("Curva:N", scale=scala_colori, legend=legenda))
-        for nome, colonna in [("Schema alternativo", "Alternativo"), ("Schema attuale", "Attuale")]
+        for nome, col in reversed(list(zip(nomi, colonne)))
     ]
     strati += _soglia(soglia, c)
-    strati += _mirino(larghi, x, {"Attuale": "Schema attuale (µg/mL)",
-                                  "Alternativo": "Schema alternativo (µg/mL)"}, c)
+    strati += _mirino(larghi, x, {col: f"{nome} (µg/mL)" for col, nome in zip(colonne, nomi)}, c)
     return alt.layer(*strati).properties(height=380).configure(locale=LOCALE_ITALIANO)
