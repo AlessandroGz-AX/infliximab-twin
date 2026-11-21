@@ -53,7 +53,7 @@ Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L,
 - [x] Passo 3: stima bayesiana (`gemello/stima.py`) + test 4 (`gemello/verifica_stima.py`, `tests/test_stima.py`)
 - [x] Passo 4: app Streamlit (`app.py`, `gemello/grafici.py`, `tests/test_app.py`)
 - [x] Passo 5: misure del paziente e schema alternativo (`app.py`, `SchemaConCambio` in `gemello/simulazione.py`, `grafico_confronto` in `gemello/grafici.py`)
-- [ ] Passo 6: README finale e bilancio in 5 righe
+- [x] Passo 6: README finale e bilancio in 5 righe
 
 ## Domande aperte
 1. **Numeri di Adedokun 2014 da verificare** sull'articolo originale. Il sito dell'editore blocca l'accesso automatico (controllo anti-robot): serve il PDF da Alessandro. Non aggirare i controlli anti-robot.
