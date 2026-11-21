@@ -16,7 +16,7 @@ Un paziente virtuale in cui si vede nel tempo la concentrazione di infliximab ne
 | 1 | Modello dell'articolo + test 1 e 2 | fatto |
 | 2 | Simulatore a 54 settimane + test 3 | fatto |
 | 3 | Stima bayesiana + test 4 | fatto |
-| 4 | App Streamlit | da fare |
+| 4 | App Streamlit | fatto |
 | 5 | Misure del paziente e schema alternativo | da fare |
 | 6 | README finale e bilancio | da fare |
 
@@ -31,6 +31,20 @@ Un paziente virtuale in cui si vede nel tempo la concentrazione di infliximab ne
 <!-- fine limiti -->
 
 Le discrepanze trovate dentro l'articolo e i risultati dei controlli sono in [docs/confronto_articolo.md](docs/confronto_articolo.md).
+
+## Aprire l'app dall'iPad (senza computer)
+
+Si pubblica l'app in privato su **Streamlit Community Cloud**, gratis e collegata a questo repository. Si fa una volta sola, da Safari:
+
+1. Vai su [share.streamlit.io](https://share.streamlit.io) e accedi con **GitHub**, autorizzando anche l'accesso ai repository privati.
+2. Crea una nuova app da GitHub e indica:
+   - repository `AlessandroGz-AX/infliximab-twin`;
+   - ramo `main`;
+   - file principale `app.py`.
+3. Se ti viene chiesta la versione di Python, scegli la 3.13 (va bene anche la 3.12).
+4. Premi **Deploy**. Dopo qualche minuto ottieni un indirizzo `…streamlit.app`, che puoi aggiungere alla schermata Home dell'iPad.
+
+L'app resta privata perché il repository è privato: per farla vedere a qualcuno usa il pulsante **Share** e inserisci la sua email. Il piano gratuito consente una sola app privata alla volta. A ogni modifica di `main` l'app si aggiorna da sola.
 
 ## I test girano anche da soli su GitHub
 
@@ -82,10 +96,17 @@ Serve Python 3.12 o più recente (provato con 3.13). Apri il Terminale nella car
    python -m gemello.verifica_stima
    ```
 
-6. L'app arriverà al passo 4 e si aprirà con `streamlit run app.py`.
+6. Apri l'app (si apre nel browser):
+
+   ```bash
+   streamlit run app.py
+   ```
 
 ## Cosa c'è dentro
 
+- `app.py`: l'app (dati del paziente, schema di terapia, curva, soglia, valli, limiti).
+- `gemello/grafici.py`: il grafico della concentrazione.
+- `.streamlit/config.toml`: impostazioni dell'app.
 - `gemello/modello.py`: parametri ed equazioni dell'articolo. Ogni numero ha accanto la pagina o la tabella da cui viene.
 - `gemello/simulazione.py`: concentrazione nel tempo per uno schema di terapia, valli, periodi sotto soglia.
 - `gemello/popolazione.py`: popolazione virtuale simile a quella degli studi (serve per i controlli).

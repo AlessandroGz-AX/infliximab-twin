@@ -1,0 +1,8 @@
+# Impostazioni di Streamlit per questa app.
+[client]
+# Barra in alto ridotta all'essenziale (niente pulsante "Deploy").
+toolbarMode = "minimal"
+
+[browser]
+# Nessuna statistica d'uso inviata a Streamlit.
+gatherUsageStats = false

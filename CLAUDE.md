@@ -50,7 +50,7 @@ Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L,
 - [x] Passo 1: modello (`gemello/modello.py`) + test 1 e 2 (`tests/test_modello.py`)
 - [x] Passo 2: simulatore 54 settimane (`gemello/simulazione.py`) + test 3 (`tests/test_validazione.py`)
 - [x] Passo 3: stima bayesiana (`gemello/stima.py`) + test 4 (`gemello/verifica_stima.py`, `tests/test_stima.py`)
-- [ ] Passo 4: app Streamlit
+- [x] Passo 4: app Streamlit (`app.py`, `gemello/grafici.py`, `tests/test_app.py`)
 - [ ] Passo 5: misure del paziente e schema alternativo
 - [ ] Passo 6: README finale e bilancio in 5 righe
 
@@ -60,7 +60,7 @@ Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L,
 
 ## Come Alessandro prova il prototipo
 - Lavora da iPad. Le parti senza interfaccia le vede su GitHub (pagina `docs/confronto_articolo.md` e segno verde dei test nella scheda Actions).
-- Per l'app (passo 4) il piano è pubblicarla in privato su Streamlit Community Cloud, collegata al repository, e aprirla da Safari. Verifica le condizioni attuali del servizio prima di proporlo. Intanto mandagli screenshot.
+- Per l'app: pubblicazione privata su Streamlit Community Cloud collegata al repository, aperta da Safari (istruzioni nel README). Condizioni verificate a novembre 2026: gratuito, un'app privata per spazio di lavoro, visitatori invitati per email. Mandagli anche screenshot (Playwright con il Chromium preinstallato, dispositivo "iPad Pro 11 landscape").
 
 ## Decisioni prese
 - Repository dedicato `AlessandroGz-AX/infliximab-twin`, separato dai progetti personali. Si lavora direttamente su `main` (autorizzato da Alessandro).
@@ -73,8 +73,12 @@ Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L,
 - **Livelli sotto 0,1 µg/mL: metodo M3** (Beal 2001), scelto da Alessandro (opzione A). È dichiarato in `gemello.LIMITI` perché non viene dall'articolo.
 - Test 4: 100 pazienti virtuali, tre modi di fare i prelievi (una valle, due valli, prelievi ACT 1). Misure: errore medio assoluto su CL e V1, errore mediano sulla valle della settimana 54 (la media è falsata dalle valli quasi a zero), errore sistematico come media geometrica dei rapporti, % di pazienti dal lato giusto della soglia di 3 µg/mL. Margini fissati prima dei risultati (vedi `tests/test_stima.py`).
 - I test girano su GitHub Actions a ogni modifica di `main` (`.github/workflows/test.yml`).
+- App: dati nella barra laterale, avvertenza in rosso in cima, risultato principale in parole, 4 riquadri numerici, grafico Altair (scala logaritmica di default, soglia tratteggiata con etichetta a sinistra, valli sotto soglia in rosso con legenda, mirino al tocco), tabella delle valli e limiti in fondo, sempre visibili. I test dell'app usano `streamlit.testing.v1.AppTest` e controllano che avvertenza e limiti compaiano.
 
 ## Mappa del codice
+- `app.py`: l'app Streamlit (`streamlit run app.py`).
+- `gemello/grafici.py`: grafico della concentrazione (Altair).
+- `.streamlit/config.toml`: impostazioni dell'app (barra in alto ridotta, niente statistiche d'uso).
 - `gemello/__init__.py`: testo dell'avvertenza (`AVVERTENZA`) e dei limiti (`LIMITI`).
 - `gemello/modello.py`: parametri ed equazioni dell'articolo, variabilità, emivita, avvisi di estrapolazione.
 - `gemello/simulazione.py`: schema di terapia, concentrazione con la formula esatta, valli, periodi sotto soglia.
