@@ -51,7 +51,7 @@ Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L,
 - [x] Passo 2: simulatore 54 settimane (`gemello/simulazione.py`) + test 3 (`tests/test_validazione.py`)
 - [x] Passo 3: stima bayesiana (`gemello/stima.py`) + test 4 (`gemello/verifica_stima.py`, `tests/test_stima.py`)
 - [x] Passo 4: app Streamlit (`app.py`, `gemello/grafici.py`, `tests/test_app.py`)
-- [ ] Passo 5: misure del paziente e schema alternativo
+- [x] Passo 5: misure del paziente e schema alternativo (`app.py`, `SchemaConCambio` in `gemello/simulazione.py`, `grafico_confronto` in `gemello/grafici.py`)
 - [ ] Passo 6: README finale e bilancio in 5 righe
 
 ## Domande aperte
@@ -74,6 +74,9 @@ Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L,
 - Test 4: 100 pazienti virtuali, tre modi di fare i prelievi (una valle, due valli, prelievi ACT 1). Misure: errore medio assoluto su CL e V1, errore mediano sulla valle della settimana 54 (la media è falsata dalle valli quasi a zero), errore sistematico come media geometrica dei rapporti, % di pazienti dal lato giusto della soglia di 3 µg/mL. Margini fissati prima dei risultati (vedi `tests/test_stima.py`).
 - I test girano su GitHub Actions a ogni modifica di `main` (`.github/workflows/test.yml`).
 - App: dati nella barra laterale, avvertenza in rosso in cima, risultato principale in parole, 4 riquadri numerici, grafico Altair (scala logaritmica di default, soglia tratteggiata con etichetta a sinistra, valli sotto soglia in rosso con legenda, mirino al tocco), tabella delle valli e limiti in fondo, sempre visibili. I test dell'app usano `streamlit.testing.v1.AppTest` e controllano che avvertenza e limiti compaiano.
+- Livelli misurati (passo 5): si inseriscono nella barra laterale per data, partendo dalla data della prima infusione. Un prelievo nel giorno di un'infusione vale come fatto prima dell'infusione. "Non dosabile" vale come livello sotto 0,1 (metodo M3). Il pulsante "Esempio" mette 1,2 µg/mL alla settimana 14. Si assume che le infusioni seguano lo schema (dichiarato nei limiti). Con livelli presenti, il grafico principale mostra la curva prima (grigia) e dopo (blu) e i livelli misurati come rombi; messaggi e riquadri usano la curva aggiornata.
+- Schema alternativo (passo 5): `SchemaConCambio` segue lo schema di partenza fino a una settimana, poi passa a nuova dose e nuovo intervallo. Il confronto usa i parametri aggiornati, se ci sono livelli misurati. Tabella: prima valle sotto soglia, giorni sotto soglia, ultima valle, farmaco totale. Colori blu e arancione verificati con lo script di validazione della skill dataviz.
+- Con Streamlit in esecuzione, le modifiche ai moduli in `gemello/` richiedono di riavviare il server per vederle.
 
 ## Mappa del codice
 - `app.py`: l'app Streamlit (`streamlit run app.py`).

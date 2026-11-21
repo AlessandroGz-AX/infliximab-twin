@@ -77,6 +77,65 @@ class Schema:
                 for s in self.settimane_delle_dosi()]
 
 
+@dataclass(frozen=True)
+class SchemaConCambio:
+    """
+    Schema "cosa succederebbe se...": si segue lo schema di partenza fino alla
+    settimana del cambio (esclusa), poi da quella settimana si passa a una
+    nuova dose con un nuovo intervallo.
+    Si usa con le stesse funzioni di Schema (curva, valli, periodi sotto soglia).
+    """
+
+    base: Schema
+    settimana_cambio: float
+    mg_per_kg: float
+    intervallo_settimane: float
+
+    def __post_init__(self):
+        if not 0 <= self.settimana_cambio < self.base.durata_settimane:
+            raise ValueError("La settimana del cambio deve cadere dentro la durata simulata.")
+        if self.mg_per_kg <= 0 or self.intervallo_settimane <= 0:
+            raise ValueError("Dose e intervallo devono essere maggiori di zero.")
+
+    @property
+    def durata_settimane(self) -> float:
+        return self.base.durata_settimane
+
+    def dosi_in_mg_per_kg(self) -> list[tuple[float, float]]:
+        """Coppie (settimana, mg/kg) di tutte le infusioni."""
+        prima = [(s, self.base.mg_per_kg) for s in self.base.settimane_delle_dosi()
+                 if s < self.settimana_cambio]
+        dopo, s = [], self.settimana_cambio
+        while s < self.durata_settimane - 1e-9:
+            dopo.append((s, self.mg_per_kg))
+            s += self.intervallo_settimane
+        return prima + dopo
+
+    def settimane_delle_dosi(self) -> list[float]:
+        return [s for s, _ in self.dosi_in_mg_per_kg()]
+
+    def settimane_dei_minimi(self) -> list[float]:
+        """Come in Schema: prima di ogni infusione dalla seconda in poi, più la successiva."""
+        dosi = self.settimane_delle_dosi()
+        if not dosi:
+            return []
+        minimi = dosi[1:]
+        prossima = dosi[-1] + self.intervallo_settimane
+        if prossima <= self.durata_settimane + 1e-9:
+            minimi.append(prossima)
+        return minimi
+
+    def dosi(self, peso_kg: float) -> list[tuple[float, float]]:
+        """Elenco delle infusioni come coppie (giorno, dose in mg)."""
+        return [(s * GIORNI_PER_SETTIMANA, mg_kg * peso_kg)
+                for s, mg_kg in self.dosi_in_mg_per_kg()]
+
+
+def dose_totale_mg(schema, peso_kg: float) -> float:
+    """Farmaco totale infuso nella durata simulata (mg)."""
+    return float(sum(dose for _, dose in schema.dosi(peso_kg)))
+
+
 def concentrazione(tempi_giorni, parametri: m.ParametriPK,
                    dosi: list[tuple[float, float]],
                    durata_infusione: float = m.DURATA_INFUSIONE_GIORNI) -> np.ndarray:

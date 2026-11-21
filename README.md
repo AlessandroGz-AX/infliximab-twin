@@ -17,7 +17,7 @@ Un paziente virtuale in cui si vede nel tempo la concentrazione di infliximab ne
 | 2 | Simulatore a 54 settimane + test 3 | fatto |
 | 3 | Stima bayesiana + test 4 | fatto |
 | 4 | App Streamlit | fatto |
-| 5 | Misure del paziente e schema alternativo | da fare |
+| 5 | Misure del paziente e schema alternativo | fatto |
 | 6 | README finale e bilancio | da fare |
 
 ## Limiti del modello
@@ -33,6 +33,12 @@ Un paziente virtuale in cui si vede nel tempo la concentrazione di infliximab ne
 <!-- fine limiti -->
 
 Le discrepanze trovate dentro l'articolo e i risultati dei controlli sono in [docs/confronto_articolo.md](docs/confronto_articolo.md).
+
+## Come si usa l'app
+
+1. **Paziente e schema.** Nella barra laterale inserisci peso, sesso, albumina e anticorpi, poi lo schema di terapia e la soglia. La curva mostra le 54 settimane, le concentrazioni minime (valli) e quando scendono sotto la soglia.
+2. **Livelli misurati.** Sempre nella barra laterale indica la data della prima infusione, poi data e valore del prelievo, e premi **Aggiungi**. Se il referto dice "non dosabile", spunta la casella apposita. Il pulsante **Esempio** aggiunge una valle di 1,2 µg/mL alla settimana 14. La curva si ricalibra sul paziente con la stima bayesiana: in grigio la previsione di partenza, in blu quella aggiornata, e i rombi sono i livelli misurati.
+3. **Cosa succederebbe se...** Sotto il grafico attiva il confronto e scegli da quale settimana cambiare, la nuova dose e il nuovo intervallo. Una tabella confronta i due schemi: prima valle sotto soglia, giorni sotto soglia, ultima valle e farmaco totale.
 
 ## Aprire l'app dall'iPad (senza computer)
 
@@ -106,8 +112,8 @@ Serve Python 3.12 o più recente (provato con 3.13). Apri il Terminale nella car
 
 ## Cosa c'è dentro
 
-- `app.py`: l'app (dati del paziente, schema di terapia, curva, soglia, valli, limiti).
-- `gemello/grafici.py`: il grafico della concentrazione.
+- `app.py`: l'app (dati del paziente, schema di terapia, curva, soglia, valli, livelli misurati, schema alternativo, limiti).
+- `gemello/grafici.py`: i grafici (curva prima e dopo le misure, confronto tra schemi).
 - `.streamlit/config.toml`: impostazioni dell'app.
 - `gemello/modello.py`: parametri ed equazioni dell'articolo. Ogni numero ha accanto la pagina o la tabella da cui viene.
 - `gemello/simulazione.py`: concentrazione nel tempo per uno schema di terapia, valli, periodi sotto soglia.

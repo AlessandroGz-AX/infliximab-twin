@@ -33,6 +33,27 @@ def test_schema_modificabile():
             sim.Schema(**sbagliato)
 
 
+def test_schema_che_cambia_da_una_certa_settimana():
+    base = sim.Schema()
+    alternativo = sim.SchemaConCambio(base, settimana_cambio=14, mg_per_kg=10,
+                                      intervallo_settimane=4)
+    assert alternativo.settimane_delle_dosi() == [0, 2, 6, 14, 18, 22, 26, 30, 34, 38, 42, 46, 50]
+    assert [mg_kg for _, mg_kg in alternativo.dosi_in_mg_per_kg()] == [5, 5, 5] + [10] * 10
+    assert alternativo.settimane_dei_minimi() == [2, 6, 14, 18, 22, 26, 30, 34, 38, 42, 46, 50, 54]
+    assert alternativo.dosi(77.0)[3] == (98.0, 770.0)
+    # Se dose e intervallo non cambiano, è identico allo schema di partenza.
+    assert sim.SchemaConCambio(base, 14, 5, 8).dosi(77.0) == base.dosi(77.0)
+    for sbagliato in (dict(settimana_cambio=60), dict(mg_per_kg=0), dict(intervallo_settimane=0)):
+        valori = dict(settimana_cambio=14, mg_per_kg=10, intervallo_settimane=8)
+        valori.update(sbagliato)
+        with pytest.raises(ValueError):
+            sim.SchemaConCambio(base, **valori)
+
+
+def test_farmaco_totale_in_54_settimane():
+    assert sim.dose_totale_mg(sim.Schema(), 77.0) == 8 * 385.0  # 8 infusioni da 385 mg
+
+
 def test_formula_esatta_uguale_a_integrazione_numerica():
     """
     Controllo indipendente: risolvo numericamente le equazioni
