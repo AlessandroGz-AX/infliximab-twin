@@ -71,10 +71,17 @@ ALBUMINA_MIN_STUDIO, ALBUMINA_MAX_STUDIO = 2.4, 5.2   # g/dL
 # ======================================================================
 IIV_CL_PERCENTO = 37.68
 IIV_V1_PERCENTO = 22.11
-# DOMANDA APERTA (vedi CLAUDE.md, "Domande aperte"): a p. 1216 l'articolo
-# dice che CL e V1 avevano una matrice di varianza-covarianza "piena", ma
-# non pubblica il valore della covarianza. Finché Alessandro non decide,
-# qui non definiamo né la conversione in omega^2 né la correlazione.
+
+# DECISIONE DI ALESSANDRO (opzione A): si usa solo la Tabella 3.
+#  - omega = percentuale / 100, intesa come deviazione standard di eta
+#    (lo stesso modo in cui l'articolo riporta l'errore residuo);
+#  - nessuna correlazione tra eta_CL ed eta_V1: a p. 1216 l'articolo dice
+#    che la covarianza era stimata, ma non ne pubblica il valore;
+#  - nessuna variabilità su V2 e Q (Tabella 3: "–"), anche se il testo a
+#    p. 1216 accenna a un blocco "simile" per V2 e Q.
+# È un limite del prototipo, dichiarato in README, docs e app.
+OMEGA_CL = IIV_CL_PERCENTO / 100  # deviazione standard di eta_CL (0,3768)
+OMEGA_V1 = IIV_V1_PERCENTO / 100  # deviazione standard di eta_V1 (0,2211)
 
 # ======================================================================
 # 4) ERRORE RESIDUO: modello combinato proporzionale + additivo
@@ -143,6 +150,21 @@ def parametri_tipici(paziente: Paziente) -> ParametriPK:
           * (paziente.peso_kg / PESO_RIFERIMENTO) ** THETA_WGT_V1
           * (1 + THETA_SEX_V1 * sex))
     return ParametriPK(CL=CL, V1=V1, V2=V2_TIPICO, Q=Q_TIPICA)
+
+
+def parametri_individuali(paziente: Paziente, eta_cl: float = 0.0,
+                          eta_v1: float = 0.0) -> ParametriPK:
+    """
+    Parametri di UN paziente specifico: quelli tipici per le sue
+    caratteristiche, spostati dalla sua variabilità individuale (eta).
+    Formula dell'articolo (p. 1213): P_i = P_tipico * exp(eta_i).
+    eta = 0 vuol dire "esattamente come il paziente tipico con quelle
+    caratteristiche". V2 e Q non hanno variabilità (decisione A).
+    """
+    tipici = parametri_tipici(paziente)
+    return ParametriPK(CL=tipici.CL * math.exp(eta_cl),
+                       V1=tipici.V1 * math.exp(eta_v1),
+                       V2=tipici.V2, Q=tipici.Q)
 
 
 def avvisi_estrapolazione(paziente: Paziente) -> list[str]:

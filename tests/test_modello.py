@@ -127,15 +127,35 @@ def test_il_peso_agisce_solo_su_V1():
         assert (p.V2, p.Q) == (4.13, 7.14)
 
 
-def test_la_pagina_di_confronto_con_l_articolo_e_aggiornata():
-    """docs/confronto_articolo.md deve contenere la tabella prodotta dal codice attuale."""
-    from pathlib import Path
+def test_variabilita_tra_pazienti_decisione_A():
+    """
+    Solo Tabella 3: omega = 0,3768 su CL e 0,2211 su V1 (deviazioni
+    standard), nessuna variabilità su V2 e Q. P_i = P_tipico * exp(eta).
+    """
+    assert m.OMEGA_CL == pytest.approx(0.3768, rel=1e-12)
+    assert m.OMEGA_V1 == pytest.approx(0.2211, rel=1e-12)
+    assert m.parametri_individuali(m.PAZIENTE_TIPICO) == m.parametri_tipici(m.PAZIENTE_TIPICO)
+    p = m.parametri_individuali(m.PAZIENTE_TIPICO, eta_cl=0.5, eta_v1=-0.2)
+    assert p.CL == pytest.approx(0.407 * np.exp(0.5), rel=1e-12)
+    assert p.V1 == pytest.approx(3.29 * np.exp(-0.2), rel=1e-12)
+    assert (p.V2, p.Q) == (4.13, 7.14)
+
+
+def test_documentazione_allineata_al_codice():
+    """
+    docs/confronto_articolo.md deve contenere la tabella prodotta dal codice
+    attuale, e sia la pagina sia il README devono riportare i limiti del
+    modello (gemello.LIMITI, gli stessi mostrati nell'app).
+    """
+    from gemello import documentazione as doc
     from gemello.confronto_articolo import tabella_markdown
 
-    pagina = Path(__file__).parent.parent / "docs" / "confronto_articolo.md"
-    assert tabella_markdown() in pagina.read_text(encoding="utf-8"), (
-        "Rigenera la tabella con: python -m gemello.confronto_articolo"
-    )
+    messaggio = "Rigenera con: python -m gemello.documentazione"
+    pagina = doc.PAGINA_CONFRONTO.read_text(encoding="utf-8")
+    readme = doc.README.read_text(encoding="utf-8")
+    assert tabella_markdown() in pagina, messaggio
+    assert doc.elenco_limiti() in pagina, messaggio
+    assert doc.elenco_limiti() in readme, messaggio
 
 
 def test_avvisi_fuori_dagli_intervalli_dello_studio():

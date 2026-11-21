@@ -22,6 +22,8 @@ Regole:
 - Ogni numero nel codice riporta la pagina o la tabella dell'articolo.
 - Dentro l'articolo, le equazioni finali (p. 1218) e la Tabella 3 prevalgono sulle frasi riassuntive del testo. Non "correggere" il modello per farlo tornare con il testo (es. "33% più bassa nelle donne"). Le discrepanze sono in `docs/confronto_articolo.md`.
 
+Dati per il solo controllo (test 3), non per i parametri del modello: Adedokun OJ et al., Gastroenterology 2014 (doi 10.1053/j.gastro.2014.08.035), livelli misurati negli studi ACT 1 e 2 con 5 mg/kg (numeri forniti da Alessandro, in `gemello/validazione.py`).
+
 Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L, Q 7,14 L/giorno, emivita terminale circa 14 giorni; CL circa +47% con anticorpi anti-infliximab, circa 33% più bassa nelle donne, più bassa con albumina più alta; il peso agisce su V1.
 
 ## Cosa deve fare l'app (Python + Streamlit, in locale)
@@ -46,24 +48,30 @@ Valori di controllo dati da Alessandro: CL 0,407 L/giorno, V1 3,29 L, V2 4,13 L,
 ## Stato del progetto (aggiornare a ogni passo)
 - [x] Passo 0: preparazione (repository, ambiente, CLAUDE.md, README)
 - [x] Passo 1: modello (`gemello/modello.py`) + test 1 e 2 (`tests/test_modello.py`)
-- [ ] Passo 2: simulatore 54 settimane + test 3
+- [x] Passo 2: simulatore 54 settimane (`gemello/simulazione.py`) + test 3 (`tests/test_validazione.py`)
 - [ ] Passo 3: stima bayesiana (massima a posteriori) + test 4
 - [ ] Passo 4: app Streamlit
 - [ ] Passo 5: misure del paziente e schema alternativo
 - [ ] Passo 6: README finale e bilancio in 5 righe
 
 ## Domande aperte
-1. **Variabilità tra pazienti** (serve dal passo 2). La Tabella 3 dà 37,68% su CL e 22,11% su V1, nessuna IIV su V2 e Q. Il testo (p. 1216) dice però che c'era una correlazione CL-V1 di cui non pubblica il valore, e che V2 e Q avevano un blocco "simile". Proposta: usare solo la Tabella 3 (ω = 0,3768 e 0,2211 come deviazioni standard, come l'articolo fa per l'errore residuo), correlazione zero, nessuna IIV su V2 e Q, e dichiararlo come limite. In attesa di risposta.
+1. **Numeri di Adedokun 2014 da verificare** sull'articolo originale. Il sito dell'editore blocca l'accesso automatico (controllo anti-robot): serve il PDF da Alessandro. Non aggirare i controlli anti-robot.
 
 ## Decisioni prese
-- Repository dedicato `AlessandroGz-AX/infliximab-twin`, separato dai progetti personali.
-- Ramo di lavoro: `claude/prototipo`.
+- Repository dedicato `AlessandroGz-AX/infliximab-twin`, separato dai progetti personali. Si lavora direttamente su `main` (autorizzato da Alessandro).
 - Ambiente Python isolato in `.venv` (installazioni approvate da Alessandro: streamlit, scipy e dipendenze).
-- Le equazioni finali e la Tabella 3 prevalgono sul testo (vedi sopra).
+- Le equazioni finali e la Tabella 3 prevalgono sul testo (vedi sopra). Alessandro ha confermato: per le donne vale l'equazione (-23,6% su CL), non il "-33%" del testo.
+- **Variabilità tra pazienti, opzione A:** solo Tabella 3, omega = 0,3768 (CL) e 0,2211 (V1) come deviazioni standard, nessuna correlazione CL-V1, nessuna variabilità su V2 e Q. È un limite dichiarato: i limiti stanno in `gemello.LIMITI` e vanno mostrati in README, `docs/confronto_articolo.md` e app.
+- Test 3: emivita mediana sulla popolazione virtuale (articolo p. 1221) + livelli di Adedokun 2014. Margini fissati prima dei risultati: mediana 14 ± 1 giorno, quartili ± 1,5 giorni, livelli tra le mediane dei due gruppi.
 - Albumina in g/dL, come nell'articolo (41 g/L = 4,1 g/dL).
 
 ## Mappa del codice
-- `gemello/modello.py`: parametri ed equazioni dell'articolo, emivita, avvisi di estrapolazione.
+- `gemello/__init__.py`: testo dell'avvertenza (`AVVERTENZA`) e dei limiti (`LIMITI`).
+- `gemello/modello.py`: parametri ed equazioni dell'articolo, variabilità, emivita, avvisi di estrapolazione.
+- `gemello/simulazione.py`: schema di terapia, concentrazione con la formula esatta, valli, periodi sotto soglia.
+- `gemello/popolazione.py`: popolazione virtuale simile alla Tabella 2 (solo per i controlli).
+- `gemello/validazione.py`: test 3, confronto con valori osservati (`python -m gemello.validazione`).
 - `gemello/confronto_articolo.py`: tabella articolo contro modello (`python -m gemello.confronto_articolo`).
-- `docs/confronto_articolo.md`: discrepanze e punti non chiari dell'articolo.
+- `gemello/documentazione.py`: rigenera le parti automatiche di README e docs (`python -m gemello.documentazione`).
+- `docs/confronto_articolo.md`: discrepanze, punti non chiari e risultati dei controlli.
 - `tests/`: test (`python -m pytest`).
